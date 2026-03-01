@@ -1,14 +1,180 @@
 import React, { useEffect, useState } from 'react';
-import { Grid, Card, CardContent, Typography, CardMedia, Pagination, Box, CircularProgress, Container, TextField, Paper, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import {
+    Grid, Card, CardContent, Typography, Box,
+    CircularProgress, TextField, FormControl,
+    Select, MenuItem, Pagination, Chip, Divider,
+} from '@mui/material';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
 
+/* ── Icons ── */
+const GoldStar = () => (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="#c9a227">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>
+);
+const Dot = () => <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: '#2e2820', flexShrink: 0 }} />;
+
+/* ── Label component ── */
+const FieldLabel = ({ children }) => (
+    <Typography variant="caption" sx={{
+        color: '#4a4038',
+        fontWeight: 700,
+        display: 'block',
+        mb: 0.75,
+        letterSpacing: '0.08em',
+        fontSize: '0.65rem',
+    }}>
+        {children}
+    </Typography>
+);
+
+/* ── Movie Card ── */
+const MovieCard = ({ movie }) => (
+    <Card sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: '#1a1816',
+        borderRadius: '12px',
+        border: '1px solid rgba(201,162,39,0.09)',
+        boxShadow: 'none',
+        transition: 'border-color 0.25s, transform 0.25s, box-shadow 0.25s',
+        '&:hover': {
+            borderColor: 'rgba(201,162,39,0.35)',
+            transform: 'translateY(-3px)',
+            boxShadow: '0 14px 36px rgba(0,0,0,0.55)',
+        },
+    }}>
+        <CardContent sx={{ flexGrow: 1, p: '20px 24px' }}>
+            {movie.genre && (
+                <Typography sx={{
+                    color: '#c9a227',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    mb: 1.25,
+                    display: 'block',
+                    opacity: 0.65,
+                }}>
+                    {movie.genre}
+                </Typography>
+            )}
+            <Typography noWrap title={movie.title} sx={{
+                fontWeight: 600,
+                letterSpacing: '-0.02em',
+                color: '#f0ead8',
+                mb: 1.25,
+                fontSize: '0.97rem',
+                lineHeight: 1.4,
+            }}>
+                {movie.title}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.75 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <GoldStar />
+                    <Typography sx={{ color: '#c9a227', fontWeight: 600, fontSize: '0.76rem' }}>
+                        {movie.rating}
+                    </Typography>
+                </Box>
+                <Dot />
+                <Typography sx={{ color: '#5a5048', fontSize: '0.72rem' }}>{new Date(movie.releaseDate).getFullYear()}</Typography>
+                <Dot />
+                <Typography sx={{ color: '#5a5048', fontSize: '0.72rem' }}>{movie.duration} min</Typography>
+            </Box>
+            <Typography sx={{
+                color: '#4a4038',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                lineHeight: 1.7,
+                fontSize: '0.8rem',
+            }}>
+                {movie.description}
+            </Typography>
+        </CardContent>
+    </Card>
+);
+
+/* ── Left Sidebar ── */
+const FilterPanel = ({ keyword, setKeyword, sortBy, setSortBy, sortOrder, setSortOrder, total }) => (
+    <Box sx={{
+        width: 240,
+        flexShrink: 0,
+        position: 'sticky',
+        top: 76,
+        alignSelf: 'flex-start',
+        height: 'fit-content',
+    }}>
+        {/* Panel header */}
+        <Box sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography sx={{ color: '#f0ead8', fontWeight: 600, fontSize: '0.875rem', letterSpacing: '-0.01em' }}>
+                    Filters
+                </Typography>
+                {total > 0 && (
+                    <Chip label={`${total} titles`} size="small" sx={{
+                        bgcolor: 'rgba(201,162,39,0.08)',
+                        color: '#c9a227',
+                        border: '1px solid rgba(201,162,39,0.18)',
+                        height: 22, fontSize: '0.65rem', fontWeight: 700,
+                    }} />
+                )}
+            </Box>
+        </Box>
+
+        {/* Search */}
+        <Box sx={{ mb: 3 }}>
+            <FieldLabel>SEARCH</FieldLabel>
+            <TextField
+                fullWidth placeholder="Title..." variant="outlined" size="small"
+                value={keyword} onChange={(e) => setKeyword(e.target.value)}
+                sx={{
+                    '& .MuiInputBase-root': { bgcolor: '#111009', fontSize: '0.85rem', color: '#f0ead8', borderRadius: '8px' },
+                    '& .MuiInputBase-input::placeholder': { color: '#3a3028', opacity: 1 },
+                }}
+            />
+        </Box>
+
+        <Divider sx={{ borderColor: 'rgba(201,162,39,0.08)', mb: 3 }} />
+
+        {/* Sort by */}
+        <Box sx={{ mb: 2 }}>
+            <FieldLabel>SORT BY</FieldLabel>
+            <FormControl fullWidth size="small">
+                <Select value={sortBy} displayEmpty onChange={(e) => setSortBy(e.target.value)}
+                    sx={{ bgcolor: '#111009', color: '#f0ead8', fontSize: '0.85rem', borderRadius: '8px' }}>
+                    <MenuItem value="">Default</MenuItem>
+                    <MenuItem value="title">Title</MenuItem>
+                    <MenuItem value="rating">Rating</MenuItem>
+                    <MenuItem value="releaseDate">Release Date</MenuItem>
+                    <MenuItem value="duration">Duration</MenuItem>
+                </Select>
+            </FormControl>
+        </Box>
+
+        {/* Order */}
+        <Box>
+            <FieldLabel>ORDER</FieldLabel>
+            <FormControl fullWidth size="small">
+                <Select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}
+                    sx={{ bgcolor: '#111009', color: '#f0ead8', fontSize: '0.85rem', borderRadius: '8px' }}>
+                    <MenuItem value="asc">Ascending ↑</MenuItem>
+                    <MenuItem value="desc">Descending ↓</MenuItem>
+                </Select>
+            </FormControl>
+        </Box>
+    </Box>
+);
+
+/* ── Main Page ── */
 const Home = () => {
     const [movies, setMovies] = useState([]);
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(1);
     const [loading, setLoading] = useState(true);
-
     const [keyword, setKeyword] = useState('');
     const [sortBy, setSortBy] = useState('');
     const [sortOrder, setSortOrder] = useState('asc');
@@ -18,177 +184,96 @@ const Home = () => {
             setLoading(true);
             try {
                 let url = `${import.meta.env.VITE_API_URL}/api/movies?pageNumber=${page}`;
-
-                if (keyword) {
-                    url = `${import.meta.env.VITE_API_URL}/api/movies/search?query=${keyword}`;
-                } else if (sortBy) {
-                    url = `${import.meta.env.VITE_API_URL}/api/movies/sorted?sortBy=${sortBy}&order=${sortOrder}`;
-                }
-
+                if (keyword) url = `${import.meta.env.VITE_API_URL}/api/movies/search?query=${keyword}`;
+                else if (sortBy) url = `${import.meta.env.VITE_API_URL}/api/movies/sorted?sortBy=${sortBy}&order=${sortOrder}`;
                 const { data } = await axios.get(url);
-
-                if (Array.isArray(data)) {
-                    setMovies(data);
-                    setPages(1);
-                } else {
-                    setMovies(data.movies);
-                    setPages(data.pages);
-                    setPage(data.page);
-                }
-
-            } catch (error) {
-                console.error(error);
-            }
+                if (Array.isArray(data)) { setMovies(data); setPages(1); }
+                else { setMovies(data.movies); setPages(data.pages); setPage(data.page); }
+            } catch (err) { console.error(err); }
             setLoading(false);
         };
-
-        const timeoutId = setTimeout(() => {
-            fetchMovies();
-        }, 500);
-
-        return () => clearTimeout(timeoutId);
+        const t = setTimeout(fetchMovies, 500);
+        return () => clearTimeout(t);
     }, [page, keyword, sortBy, sortOrder]);
 
-    const handlePageChange = (event, value) => {
-        setPage(value);
-    };
-
-    if (loading) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
-    }
-
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, pr: { md: '340px' } }}>
-            <Grid container spacing={4}>
-                {/* Main Content */}
-                <Grid item xs={12}>
-                    <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
-                        Top Movies
-                    </Typography>
+        /* Full-page wrapper */
+        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, md: 5 }, pt: 5, pb: 10 }}>
 
+            {/* ── Page header ── */}
+            <Box sx={{ mb: 6, borderBottom: '1px solid rgba(201,162,39,0.08)', pb: 4 }}>
+                <Typography sx={{
+                    fontSize: { xs: '1.75rem', md: '2rem' },
+                    fontWeight: 700,
+                    letterSpacing: '-0.04em',
+                    color: '#f0ead8',
+                    mb: 0.5,
+                }}>
+                    Browse Films
+                </Typography>
+                <Typography sx={{ color: '#4a4038', fontSize: '0.85rem' }}>
+                    Explore, sort, and discover the collection.
+                </Typography>
+            </Box>
+
+            {/* ── Two-column layout ── */}
+            <Box sx={{ display: 'flex', gap: { xs: 0, md: 6 }, alignItems: 'flex-start' }}>
+
+                {/* Left: filter panel — hidden on mobile */}
+                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                    <FilterPanel
+                        keyword={keyword} setKeyword={setKeyword}
+                        sortBy={sortBy} setSortBy={setSortBy}
+                        sortOrder={sortOrder} setSortOrder={setSortOrder}
+                        total={movies.length}
+                    />
+                </Box>
+
+                {/* Vertical divider */}
+                <Box sx={{ display: { xs: 'none', md: 'block' }, width: '1px', bgcolor: 'rgba(201,162,39,0.08)', alignSelf: 'stretch', flexShrink: 0 }} />
+
+                {/* Right: main content */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                     {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '45vh' }}>
+                            <CircularProgress size={26} sx={{ color: '#c9a227' }} />
+                        </Box>
+                    ) : movies.length === 0 ? (
+                        <Box sx={{ textAlign: 'center', py: 14 }}>
+                            <Typography sx={{ color: '#3a3028', fontSize: '0.875rem' }}>Nothing found in the vault.</Typography>
+                        </Box>
                     ) : (
                         <>
-                            <Grid container spacing={3}>
+                            <Grid container spacing={2.5}>
                                 {movies.map((movie) => (
-                                    <Grid item key={movie._id} xs={12} sm={6} md={4}>
-                                        <Card sx={{
-                                            height: '100%',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            bgcolor: 'background.paper',
-                                            borderRadius: 2,
-                                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-                                            transition: 'transform 0.3s ease-in-out, box-shadow 0.3s',
-                                            '&:hover': {
-                                                transform: 'translateY(-4px)',
-                                                boxShadow: '0 10px 20px rgba(0,0,0,0.5)',
-                                            }
-                                        }}>
-                                            <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                                                <Typography gutterBottom variant="h5" component="div" noWrap title={movie.title} sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
-                                                    {movie.title}
-                                                </Typography>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                                    <Typography variant="body2" sx={{
-                                                        bgcolor: 'rgba(79, 195, 247, 0.15)',
-                                                        color: '#4FC3F7',
-                                                        px: 1,
-                                                        py: 0.5,
-                                                        borderRadius: 1,
-                                                        fontWeight: 'bold'
-                                                    }}>
-                                                        ★ {movie.rating}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                                                        {new Date(movie.releaseDate).getFullYear()} • {movie.duration} min
-                                                    </Typography>
-                                                </Box>
-                                                <Typography variant="body2" color="text.secondary" sx={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 3,
-                                                    WebkitBoxOrient: 'vertical',
-                                                    lineHeight: 1.6
-                                                }}>
-                                                    {movie.description}
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
+                                    <Grid item key={movie._id} xs={12} sm={6} lg={4}>
+                                        <MovieCard movie={movie} />
                                     </Grid>
                                 ))}
                             </Grid>
-                            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-                                <Pagination count={pages} page={page} onChange={handlePageChange} color="primary" />
-                            </Box>
+
+                            {pages > 1 && (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+                                    <Pagination
+                                        count={pages} page={page}
+                                        onChange={(_, v) => setPage(v)}
+                                        variant="outlined" shape="rounded"
+                                        sx={{
+                                            '& .MuiPaginationItem-root': { color: '#7a6e5e', borderColor: 'rgba(201,162,39,0.12)' },
+                                            '& .Mui-selected': {
+                                                bgcolor: 'rgba(201,162,39,0.1) !important',
+                                                color: '#c9a227',
+                                                borderColor: 'rgba(201,162,39,0.4)',
+                                            },
+                                        }}
+                                    />
+                                </Box>
+                            )}
                         </>
                     )}
-                </Grid>
-
-                {/* Sidebar - Search & Sort */}
-                <Box
-                    sx={{
-                        width: '300px',
-                        position: 'fixed',
-                        top: '80px',
-                        right: '24px',
-                        zIndex: 1000,
-                        maxHeight: 'calc(100vh - 100px)',
-                        overflowY: 'auto'
-                    }}
-                >
-                    <Paper elevation={3} sx={{ p: 3 }}>
-                        <Typography variant="h6" gutterBottom>
-                            Filters
-                        </Typography>
-
-                        {/* Search Bar */}
-                        <TextField
-                            fullWidth
-                            label="Search Movies..."
-                            variant="outlined"
-                            margin="normal"
-                            value={keyword}
-                            onChange={(e) => setKeyword(e.target.value)}
-                            sx={{ mb: 3 }}
-                        />
-
-                        {/* Sort Options */}
-                        <Typography variant="subtitle1" gutterBottom>
-                            Sort By
-                        </Typography>
-                        <FormControl fullWidth margin="dense">
-                            <InputLabel>Criteria</InputLabel>
-                            <Select
-                                value={sortBy}
-                                label="Criteria"
-                                onChange={(e) => setSortBy(e.target.value)}
-                            >
-                                <MenuItem value="">Default</MenuItem>
-                                <MenuItem value="title">Title</MenuItem>
-                                <MenuItem value="rating">Rating</MenuItem>
-                                <MenuItem value="releaseDate">Release Date</MenuItem>
-                                <MenuItem value="duration">Duration</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
-                            <InputLabel>Order</InputLabel>
-                            <Select
-                                value={sortOrder}
-                                label="Order"
-                                onChange={(e) => setSortOrder(e.target.value)}
-                            >
-                                <MenuItem value="asc">Ascending</MenuItem>
-                                <MenuItem value="desc">Descending</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Paper>
                 </Box>
-            </Grid>
-        </Container>
+            </Box>
+        </Box>
     );
 };
 
